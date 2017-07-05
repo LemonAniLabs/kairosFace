@@ -14,7 +14,6 @@ config.read('Config.ini')
 appKey = config.items("API_KEY")
 kairos_face.settings.app_id = appKey[0][1]
 kairos_face.settings.app_key = appKey[1][1]
-global DATASET_DIR
 DATASET_DIR='/home/unicornx/Documents/DataSet/Face/'
 Face_Class = ['Andy', 'River', 'Lennon']
 TEMP_IMG = 'tmp.jpg'
@@ -25,8 +24,9 @@ def parseArg():
     parser.add_argument('-i', '--IMG_URL', default='./1.jpg', help='Image URL Path')
     parser.add_argument('-d', '--DATA_DIR', default='./DataSet/', help='DataSet Image Dir')
     parser.add_argument('-w', '--WEBCAM', action='store_true', help='Enable WebCamera Mode')
+    parser.add_argument('-c', '--CLEAN', action='store_true', help='Clean Gallery')
     args = parser.parse_args()
-    print(args)
+    cprint(args, 'green')
     return args
 
 def MultiEnroll(subjectID):
@@ -66,16 +66,24 @@ def Recognition(URL=None, FILE=None):
 
 def main(args):
     _args = parseArg()
+    
+    if _args.CLEAN: 
+        cprint('Galleries : {}' % (kairos_face.get_galleries_names_list()), 'green')
+        _ = map(lambda galleryName: kairos_face.remove_gallery(galleryName) ,kairos_face.get_galleries_names_list()['gallery_ids'])
+        if len(_) > 0 : print(_)
+        sys.exit()
+    
+    global DATASET_DIR
     DATASET_DIR=_args.DATA_DIR
-    #global DATASET_DIR
     cprint('Enroll Training Set', 'green')
     _ = map(lambda x: MultiEnroll(x), Face_Class)
     
+
     if not _args.WEBCAM:
         Recognition(FILE=_args.IMG_URL)
         sys.exit()
 
-    thread.start_new_thread(WebCamThread, ("ThreadFun", 1))
+    #thread.start_new_thread(WebCamThread, ("ThreadFun", 1))
     cap = cv2.VideoCapture(0)
     while True:
         try:
@@ -84,7 +92,9 @@ def main(args):
 	    cv2.imshow('frame', frame)
             cv2.imwrite(TEMP_IMG, frame)
             #Recognition(FILE='./1.jpg')
-            
+            cnt = cv2.imencode('.jpg',frame)[1]
+            b64 = base64.encodestring(cnt)
+            print(b64)
 	    if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
