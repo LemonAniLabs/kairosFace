@@ -1,3 +1,4 @@
+import base64
 import os, sys
 import argparse
 import kairos_face
@@ -7,7 +8,7 @@ import glob
 import json
 from termcolor import colored, cprint
 import ConfigParser
-import thread
+import threading
 
 config = ConfigParser.ConfigParser()
 config.read('Config.ini')
@@ -15,14 +16,15 @@ appKey = config.items("API_KEY")
 kairos_face.settings.app_id = appKey[0][1]
 kairos_face.settings.app_key = appKey[1][1]
 DATASET_DIR='/home/unicornx/Documents/DataSet/Face/'
-Face_Class = ['Andy', 'River', 'Lennon']
+Face_Class = ['Lennon', 'Jason']
 TEMP_IMG = 'tmp.jpg'
 
 def parseArg():
 
     parser = argparse.ArgumentParser(description='Face Recognition.')
-    parser.add_argument('-i', '--IMG_URL', default='./1.jpg', help='Image URL Path')
-    parser.add_argument('-d', '--DATA_DIR', default='./DataSet/', help='DataSet Image Dir')
+    parser.add_argument('-i', '--IMG_FILE', default=None, help='Image URL Path')
+    parser.add_argument('-u', '--IMG_URL', default=None, help='Image URL Path')
+    parser.add_argument('-d', '--DATA_DIR', default='./DataSet/Private/', help='DataSet Image Dir')
     parser.add_argument('-w', '--WEBCAM', action='store_true', help='Enable WebCamera Mode')
     parser.add_argument('-c', '--CLEAN', action='store_true', help='Clean Gallery')
     args = parser.parse_args()
@@ -36,8 +38,9 @@ def MultiEnroll(subjectID):
         _ = map(lambda imgPath: kairos_face.enroll_face(file=imgPath, subject_id=subjectID, gallery_name='a-gallery'), glob.glob(ClassFolder+'/*'))
     except:
         print('Exception Info : ', sys.exc_info())
-def WebCamThread(string, sleeptime, *args):
-    while(True):
+def WebCamThread():
+    t = threading.currentThread()
+    while getattr(t, 'do_run', True):
         Recognition(FILE=TEMP_IMG)
 
 def Recognition(URL=None, FILE=None):
@@ -80,10 +83,12 @@ def main(args):
     
 
     if not _args.WEBCAM:
-        Recognition(FILE=_args.IMG_URL)
+        Recognition(URL=_args.IMG_URL, FILE=_args.IMG_FILE)
         sys.exit()
 
     #thread.start_new_thread(WebCamThread, ("ThreadFun", 1))
+    thread1 = threading.Thread(target=WebCamThread)
+    thread1.start()
     cap = cv2.VideoCapture(0)
     while True:
         try:
@@ -92,18 +97,19 @@ def main(args):
 	    cv2.imshow('frame', frame)
             cv2.imwrite(TEMP_IMG, frame)
             #Recognition(FILE='./1.jpg')
-            cnt = cv2.imencode('.jpg',frame)[1]
-            b64 = base64.encodestring(cnt)
-            print(b64)
 	    if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
         except KeyboardInterrupt:
             print("\n<<<<<<Exit>>>>>>>")
+            thread1.do_run=False
+            thread1.join()
             sys.exit()
 
 	
     # When everything done, release the capture
+    thread1.do_run=False
+    thread1.join()
     cap.release()
     cv2.destroyAllWindows()
     cv2.waitKey(1)
