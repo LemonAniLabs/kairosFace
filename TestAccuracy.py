@@ -51,8 +51,8 @@ def Recognition(subject_id, FILESET=None):
 
     try:
         cprint('Test id : %s ' %(subject_id), 'yellow')
-        print(FILESET)
 	FILESET = np.random.choice(FILESET,5)
+        print(FILESET)
         recognized_faces = map(lambda aFace : json.loads(json.dumps(kairos_face.recognize_face(file=aFace, gallery_name='b-gallery')))['images'][0]['transaction'], FILESET)
         #result = map(lambda aFaceInfo : aFaceInfo['status'] == 'success' and aFaceInfo['subject_id'] == subject_id ,recognized_faces)
 
